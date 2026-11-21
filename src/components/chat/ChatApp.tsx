@@ -22,16 +22,39 @@ import { getSocket } from "@/lib/realtime";
 import { ConversationList } from "./ConversationList";
 import { ChatWindow } from "./ChatWindow";
 import { ContactPanel } from "./ContactPanel";
+import { DbAsleepDialog } from "./DbAsleepDialog";
 
-// ทุกอย่างเรียก API จริง + รับ realtime (Socket.IO) จาก BE
-// ข้อความใหม่ / สถานะส่ง / ห้องเปลี่ยน → อัปเดตจาก event (ดู useEffect realtime)
 
 const noopSubscribe = () => () => {};
 
-/**
- * เวลาในแชตขึ้นกับ "ตอนนี้" ของเครื่องผู้ใช้ จึง render เฉพาะฝั่ง browser
- * (Next.js 16 + cacheComponents ไม่ให้ prerender ค่า new Date())
- */
+/** รอข้อมูลนานเกินนี้ → ถือว่า DB หลับอยู่ ให้ผู้ใช้กดรีเฟรช */
+const FETCH_TIMEOUT_MS = 15_000;
+
+class FetchTimeoutError extends Error {
+  constructor() {
+    super("fetch timeout");
+    this.name = "FetchTimeoutError";
+  }
+}
+
+/** reject ถ้า promise ไม่เสร็จภายใน ms */
+function withTimeout<T>(promise: Promise<T>, ms = FETCH_TIMEOUT_MS): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new FetchTimeoutError()), ms);
+    promise.then(
+      (v) => {
+        clearTimeout(timer);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(timer);
+        reject(e);
+      },
+    );
+  });
+}
+
+
 export function ChatApp() {
   const isClient = useSyncExternalStore(
     noopSubscribe,
@@ -53,6 +76,8 @@ function ChatAppInner() {
   const [admins, setAdmins] = useState<Admin[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // โหลดข้อมูลไม่สำเร็จ / timeout / นานเกิน 15 วิ → แสดง popup ให้รีเฟรช
+  const [dbAsleep, setDbAsleep] = useState(false);
   // ข้อความแยกตามห้อง — ดึงจาก GET /api/conversations/:id/messages ตอนเปิดห้องครั้งแรก
   const [messages, setMessages] = useState<Record<string, Message[]>>({});
   // cursor สำหรับโหลดข้อความเก่ากว่า (null = หมดแล้ว)
@@ -76,15 +101,16 @@ function ChatAppInner() {
     let cancelled = false;
     const load = async () => {
       try {
-        const [page, adminList] = await Promise.all([
-          listConversations({ limit: 100 }),
-          listAdmins(),
-        ]);
+        const [page, adminList] = await withTimeout(
+          Promise.all([listConversations({ limit: 100 }), listAdmins()]),
+        );
         if (cancelled) return;
         setConversations(page.items);
         setAdmins(adminList);
       } catch (err) {
-        if (!cancelled) setError(errorMessage(err));
+        if (cancelled) return;
+        if (isAuthError(err)) setError(errorMessage(err));
+        else setDbAsleep(true);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -165,18 +191,18 @@ function ChatAppInner() {
 
   const selected = conversations.find((c) => c.id === selectedId) ?? null;
 
-  /** ดึงข้อความของห้อง — ไม่ส่ง before = หน้าล่าสุด, ส่ง before = เก่ากว่านั้น */
   const fetchMessages = async (convId: string, before?: string) => {
     setLoadingMessages(true);
     try {
-      const page = await listMessages(convId, { before });
+      const page = await withTimeout(listMessages(convId, { before }));
       setMessages((all) => ({
         ...all,
         [convId]: before ? [...page.items, ...(all[convId] ?? [])] : page.items,
       }));
       setNextBefore((all) => ({ ...all, [convId]: page.nextBefore }));
     } catch (err) {
-      setError(errorMessage(err));
+      if (isAuthError(err)) setError(errorMessage(err));
+      else setDbAsleep(true);
     } finally {
       setLoadingMessages(false);
     }
@@ -272,16 +298,27 @@ function ChatAppInner() {
   const assign = (adminId: string | null) =>
     saveConversation({ assignedAdminId: adminId });
 
-  if (loading) {
+  if (loading || (dbAsleep && conversations.length === 0)) {
     return (
-      <div className="flex h-dvh items-center justify-center text-sm text-zinc-400">
-        กำลังโหลดรายการแชต…
-      </div>
+      <>
+        <div className="flex h-dvh flex-col items-center justify-center gap-3 text-sm text-zinc-400">
+          {!dbAsleep && (
+            <span
+              aria-hidden
+              className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-200 border-t-zinc-500"
+            />
+          )}
+          {dbAsleep ? "โหลดรายการแชตไม่สำเร็จ" : "กำลังโหลดรายการแชต…"}
+        </div>
+        {dbAsleep && <DbAsleepDialog />}
+      </>
     );
   }
 
   return (
     <>
+   
+      {dbAsleep && <DbAsleepDialog onClose={() => setDbAsleep(false)} />}
       {error && (
         <div
           role="alert"
@@ -341,6 +378,11 @@ function ChatAppInner() {
       </div>
     </>
   );
+}
+
+/** 401/403 ไม่ใช่ DB หลับ — ให้ AuthGuard / แบนเนอร์ error จัดการตามเดิม */
+function isAuthError(err: unknown): boolean {
+  return err instanceof ApiError && (err.status === 401 || err.status === 403);
 }
 
 /** คืน object ใหม่ที่ไม่มี key นี้ */
