@@ -15,9 +15,10 @@ interface Props {
   conversations: Conversation[];
   selectedId: string | null;
   onSelect: (id: string) => void;
+  onDelete: (id: string) => void;
 }
 
-export function ConversationList({ conversations, selectedId, onSelect }: Props) {
+export function ConversationList({ conversations, selectedId, onSelect, onDelete }: Props) {
   const [status, setStatus] = useState<ConversationStatus>("open");
   const [query, setQuery] = useState("");
 
@@ -69,10 +70,11 @@ export function ConversationList({ conversations, selectedId, onSelect }: Props)
           const name = c.contact.displayName ?? "ไม่ทราบชื่อ";
           const active = c.id === selectedId;
           return (
-            <li key={c.id}>
+            <li key={c.id} className="border-b border-[#dddddd] flex flex-col items-end  px-4 py-3">
+              {/* chat */}
               <button
                 onClick={() => onSelect(c.id)}
-                className={`flex w-full items-center gap-3 px-4 py-3 text-left transition ${active ? "bg-emerald-50" : "hover:bg-zinc-50"}`}
+                className={`flex w-full items-center gap-3 text-left transition ${active ? "bg-emerald-50" : "hover:bg-zinc-50"}`}
               >
                 <Avatar name={name} src={c.contact.pictureUrl} size={44} />
                 <div className="min-w-0 flex-1">
@@ -92,6 +94,16 @@ export function ConversationList({ conversations, selectedId, onSelect }: Props)
                     )}
                   </div>
                 </div>
+              </button>
+             {/* action */}
+              <button
+                type="button"
+                onClick={() => onDelete(c.id)}
+                className="w-[50px] rounded-xl border border-red-500 p-1 text-red-600 transition hover:bg-red-50"
+                aria-label={`ลบห้องแชต ${name}`}
+                title="ลบห้องแชต"
+              >
+                ลบ
               </button>
             </li>
           );

@@ -11,6 +11,7 @@ import type {
 import { listAdmins } from "@/lib/api/admins";
 import { ApiError } from "@/lib/api/client";
 import {
+  deleteConversation,
   listConversations,
   markConversationRead,
   updateConversation,
@@ -206,6 +207,25 @@ function ChatAppInner() {
     }
   };
 
+  /** DELETE /api/conversations/:id — ลบห้อง + ข้อความทั้งหมด (owner เท่านั้น) */
+  const removeConversation = async (id: string) => {
+    const conv = conversations.find((c) => c.id === id);
+    const name = conv?.contact.displayName ?? "ไม่ทราบชื่อ";
+    if (!window.confirm(`ลบห้องแชตของ "${name}" และข้อความทั้งหมด?\nลบแล้วกู้คืนไม่ได้`)) return;
+    try {
+      await deleteConversation(id);
+      setConversations((list) => list.filter((c) => c.id !== id));
+      setMessages((all) => omit(all, id));
+      setNextBefore((all) => omit(all, id));
+      if (selectedId === id) {
+        setSelectedId(null);
+        setShowInfo(false);
+      }
+    } catch (err) {
+      setError(errorMessage(err));
+    }
+  };
+
   // อัปเดตบนจอทันที แล้วค่อยยิง PATCH — ถ้าพังให้ย้อนค่าเดิม
   const saveConversation = async (input: UpdateConversationInput) => {
     if (!selected) return;
@@ -283,6 +303,7 @@ function ChatAppInner() {
             conversations={conversations}
             selectedId={selectedId}
             onSelect={select}
+            onDelete={removeConversation}
           />
         </div>
 
@@ -320,6 +341,13 @@ function ChatAppInner() {
       </div>
     </>
   );
+}
+
+/** คืน object ใหม่ที่ไม่มี key นี้ */
+function omit<T>(obj: Record<string, T>, key: string): Record<string, T> {
+  const next = { ...obj };
+  delete next[key];
+  return next;
 }
 
 function errorMessage(err: unknown): string {
