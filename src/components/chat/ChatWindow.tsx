@@ -43,36 +43,9 @@ export function ChatWindow({ conversation, messages, loadingMessages, hasOlder, 
         <Avatar name={name} src={conversation.contact.pictureUrl} size={36} />
         <div className="min-w-0 flex-1">
           <div className="truncate font-semibold text-zinc-900">{name}</div>
-          <div className="text-xs text-zinc-500">
-            {conversation.contact.isFollowing ? "เป็นเพื่อนกับ OA" : <span className="text-rose-600">บล็อก OA แล้ว</span>}
-          </div>
+        
         </div>
-        <select
-          value={conversation.assignedAdminId ?? ""}
-          onChange={(e) => onAssign(e.target.value || null)}
-          className="hidden rounded-md border border-zinc-200 bg-white px-2 py-1.5 text-sm text-zinc-700 sm:block"
-          aria-label="ผู้รับผิดชอบ"
-        >
-          <option value="">ยังไม่มีผู้รับผิดชอบ</option>
-          {admins.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.name}
-            </option>
-          ))}
-        </select>
-        <select
-          value={conversation.status}
-          onChange={(e) => onStatusChange(e.target.value as ConversationStatus)}
-          className="rounded-md border border-zinc-200 bg-white px-2 py-1.5 text-sm text-zinc-700"
-          aria-label="สถานะห้อง"
-        >
-          <option value="open">เปิดอยู่</option>
-          <option value="pending">รอดำเนินการ</option>
-          <option value="closed">ปิดแล้ว</option>
-        </select>
-        <button onClick={onToggleInfo} className="rounded-md p-1.5 text-zinc-500 hover:bg-zinc-100" aria-label="ข้อมูลลูกค้า" title="ข้อมูลลูกค้า">
-          ⓘ
-        </button>
+       
       </header>
 
       <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-3 py-4 md:px-6">

@@ -40,28 +40,8 @@ export function ConversationList({ conversations, selectedId, onSelect, onDelete
     <section className="flex h-full min-h-0 flex-col border-r border-zinc-200 bg-white">
       <header className="space-y-3 border-b border-zinc-200 p-4">
         <h1 className="text-lg font-semibold text-zinc-900">แชต LINE OA</h1>
-        <input
-          type="search"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="ค้นหาชื่อหรือข้อความ"
-          className="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:bg-white"
-        />
-        <div role="tablist" className="flex gap-1 rounded-lg bg-zinc-100 p-1 text-sm">
-          {tabs.map((t) => (
-            <button
-              key={t.key}
-              role="tab"
-              aria-selected={status === t.key}
-              onClick={() => setStatus(t.key)}
-              className={`flex-1 whitespace-nowrap rounded-md px-1.5 py-1.5 text-[13px] font-medium transition ${
-                status === t.key ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-800"
-              }`}
-            >
-              {t.label} <span className="text-xs text-zinc-400">{counts[t.key]}</span>
-            </button>
-          ))}
-        </div>
+       
+      
       </header>
 
       <ul className="min-h-0 flex-1 overflow-y-auto">
@@ -74,7 +54,7 @@ export function ConversationList({ conversations, selectedId, onSelect, onDelete
               {/* chat */}
               <button
                 onClick={() => onSelect(c.id)}
-                className={`flex w-full items-center gap-3 text-left transition ${active ? "bg-emerald-50" : "hover:bg-zinc-50"}`}
+                className={`flex w-full items-center gap-3 text-left transition `}
               >
                 <Avatar name={name} src={c.contact.pictureUrl} size={44} />
                 <div className="min-w-0 flex-1">

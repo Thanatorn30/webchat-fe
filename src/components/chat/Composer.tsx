@@ -30,14 +30,6 @@ export function Composer({ disabled, onSend }: { disabled: boolean; onSend: (tex
 
   return (
     <div className="flex items-end gap-2 border-t border-zinc-200 bg-white p-3">
-      <button
-        type="button"
-        title="แนบรูป (ยังไม่เปิดใช้)"
-        disabled
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-xl text-zinc-400"
-      >
-        📎
-      </button>
       <textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
