@@ -1,36 +1,32 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# webchat-fe
 
-## Getting Started
+หน้าแชตแอดมินสำหรับตอบลูกค้าจาก LINE OA (Next.js 16 + TypeScript + Tailwind)
 
-First, run the development server:
+สถานะ: **UI อย่างเดียว** ใช้ข้อมูลตัวอย่างใน `src/lib/mock-data.ts` ยังไม่ได้ต่อ webchat-be
+
+## เริ่มใช้งาน
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev        # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## โครงสร้าง
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+src/app/page.tsx                      หน้าเดียว → <ChatApp />
+src/components/chat/ChatApp.tsx       state ทั้งหมด + จุด TODO ที่จะเปลี่ยนเป็นเรียก API
+src/components/chat/ConversationList  รายการห้อง: แท็บ เปิดอยู่/รอดำเนินการ/ปิดแล้ว, ค้นหา, unread
+src/components/chat/ChatWindow        หัวห้อง (ผู้รับผิดชอบ/สถานะ), ข้อความ, คั่นวัน
+src/components/chat/MessageBubble     text / รูป (pending/ready/failed) / sticker / location / unsend
+                                      + สถานะส่ง กำลังส่ง / ส่งแล้ว / ส่งไม่สำเร็จ (ส่งใหม่)
+src/components/chat/Composer          Enter ส่ง, Shift+Enter ขึ้นบรรทัด, ปิดช่องพิมพ์ถ้าลูกค้าบล็อก OA
+src/components/chat/ContactPanel      ข้อมูลลูกค้า (LINE userId, สถานะเพื่อน)
+src/types/chat.ts                     type ตรงกับ prisma schema ฝั่ง BE
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## ตอนต่อ BE
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+ค้นหา `TODO` ใน `ChatApp.tsx` — แต่ละจุดระบุ endpoint ที่ต้องเรียกไว้แล้ว
+(`/api/conversations`, `/:id/messages`, `/:id/read`, `PATCH /:id`) และเพิ่ม realtime สำหรับ
+`message.created` / `message.updated`

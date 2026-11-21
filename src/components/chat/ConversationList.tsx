@@ -1,0 +1,102 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import type { Conversation, ConversationStatus } from "@/types/chat";
+import { formatListTime } from "@/lib/format";
+import { Avatar } from "./Avatar";
+
+const tabs: { key: ConversationStatus; label: string }[] = [
+  { key: "open", label: "เปิดอยู่" },
+  { key: "pending", label: "รอดำเนินการ" },
+  { key: "closed", label: "ปิดแล้ว" },
+];
+
+interface Props {
+  conversations: Conversation[];
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+}
+
+export function ConversationList({ conversations, selectedId, onSelect }: Props) {
+  const [status, setStatus] = useState<ConversationStatus>("open");
+  const [query, setQuery] = useState("");
+
+  const counts = useMemo(() => {
+    const c: Record<ConversationStatus, number> = { open: 0, pending: 0, closed: 0 };
+    for (const conv of conversations) c[conv.status]++;
+    return c;
+  }, [conversations]);
+
+  const items = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return conversations
+      .filter((c) => c.status === status)
+      .filter((c) => !q || (c.contact.displayName ?? "").toLowerCase().includes(q) || (c.lastMessagePreview ?? "").toLowerCase().includes(q))
+      .sort((a, b) => (b.lastMessageAt ?? "").localeCompare(a.lastMessageAt ?? ""));
+  }, [conversations, status, query]);
+
+  return (
+    <section className="flex h-full min-h-0 flex-col border-r border-zinc-200 bg-white">
+      <header className="space-y-3 border-b border-zinc-200 p-4">
+        <h1 className="text-lg font-semibold text-zinc-900">แชต LINE OA</h1>
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="ค้นหาชื่อหรือข้อความ"
+          className="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm outline-none focus:border-emerald-500 focus:bg-white"
+        />
+        <div role="tablist" className="flex gap-1 rounded-lg bg-zinc-100 p-1 text-sm">
+          {tabs.map((t) => (
+            <button
+              key={t.key}
+              role="tab"
+              aria-selected={status === t.key}
+              onClick={() => setStatus(t.key)}
+              className={`flex-1 whitespace-nowrap rounded-md px-1.5 py-1.5 text-[13px] font-medium transition ${
+                status === t.key ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-800"
+              }`}
+            >
+              {t.label} <span className="text-xs text-zinc-400">{counts[t.key]}</span>
+            </button>
+          ))}
+        </div>
+      </header>
+
+      <ul className="min-h-0 flex-1 overflow-y-auto">
+        {items.length === 0 && <li className="p-6 text-center text-sm text-zinc-400">ไม่มีห้องแชต</li>}
+        {items.map((c) => {
+          const name = c.contact.displayName ?? "ไม่ทราบชื่อ";
+          const active = c.id === selectedId;
+          return (
+            <li key={c.id}>
+              <button
+                onClick={() => onSelect(c.id)}
+                className={`flex w-full items-center gap-3 px-4 py-3 text-left transition ${active ? "bg-emerald-50" : "hover:bg-zinc-50"}`}
+              >
+                <Avatar name={name} src={c.contact.pictureUrl} size={44} />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span className={`truncate ${c.unreadCount ? "font-semibold text-zinc-900" : "font-medium text-zinc-800"}`}>{name}</span>
+                    <span className="shrink-0 text-xs text-zinc-400">{formatListTime(c.lastMessageAt)}</span>
+                  </div>
+                  <div className="mt-0.5 flex items-center justify-between gap-2">
+                    <span className={`truncate text-sm ${c.unreadCount ? "text-zinc-800" : "text-zinc-500"}`}>
+                      {!c.contact.isFollowing && <span className="mr-1 text-rose-500">[บล็อก]</span>}
+                      {c.lastMessagePreview}
+                    </span>
+                    {c.unreadCount > 0 && (
+                      <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-emerald-600 px-1.5 text-xs font-semibold text-white">
+                        {c.unreadCount}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
